@@ -1,0 +1,1579 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>셜록 홈즈 — 자문탐정</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#1a1108;
+    --panel:#231708ee;
+    --panel-2:#20273338;
+    --line:#5a3d1f4a;
+    --parchment:#f0e4c4;
+    --parchment-dim:#c9b48f;
+    --brass:#d4a94f;
+    --brass-dim:#a9793a;
+    --blood:#7a2e2e;
+    --blood-bright:#a84040;
+    --user-bubble:#3a2614;
+  }
+  *{box-sizing:border-box;}
+  html,body{height:100%;}
+  body{
+    margin:0;
+    background:var(--ink);
+    color:var(--parchment);
+    font-family:'IBM Plex Mono', monospace;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    min-height:100vh;
+    padding:24px;
+    position:relative;
+    overflow-x:hidden;
+  }
+  #sceneBg{
+    position:fixed;
+    inset:0;
+    z-index:-2;
+    pointer-events:none;
+    opacity:0;
+    transition:opacity 0.7s ease;
+  }
+  #sceneBg.show{ opacity:1; }
+  #sceneBg svg{ width:100%; height:100%; }
+  #sceneBg::after{
+    content:"";
+    position:fixed;
+    inset:0;
+    z-index:-1;
+    background:radial-gradient(ellipse at 50% 40%, transparent 0%, #0d0703cc 85%);
+  }
+
+  /* ---------- INTRO SCREEN ---------- */
+  #intro{
+    width:100%;
+    max-width:640px;
+    background:var(--panel);
+    backdrop-filter:blur(10px) saturate(130%);
+    border:1px solid var(--line);
+    border-radius:2px;
+    padding:48px 40px 40px;
+    position:relative;
+    box-shadow:0 30px 90px -20px #000000cc;
+  }
+  #intro::before{
+    content:"";
+    position:absolute;
+    top:0;left:0;right:0;height:3px;
+    background:linear-gradient(90deg, var(--blood), var(--brass) 60%, transparent);
+  }
+  .case-tag{
+    font-size:11px;
+    letter-spacing:.2em;
+    color:var(--brass);
+    text-transform:uppercase;
+    margin-bottom:14px;
+  }
+  #intro h1{
+    font-family:'Gowun Batang', serif;
+    font-size:34px;
+    margin:0 0 4px;
+    color:var(--parchment);
+    letter-spacing:-.01em;
+  }
+  #intro .subtitle{
+    color:var(--parchment-dim);
+    font-size:13px;
+    margin-bottom:28px;
+  }
+  .rule-block{
+    border-left:2px solid var(--brass-dim);
+    padding-left:16px;
+    margin-bottom:18px;
+  }
+  .rule-block h3{
+    font-family:'Gowun Batang', serif;
+    font-size:15px;
+    margin:0 0 8px;
+    color:var(--brass);
+    font-weight:700;
+  }
+  .rule-block p, .rule-block li{
+    font-size:13px;
+    line-height:1.75;
+    color:var(--parchment-dim);
+    margin:0;
+  }
+  .rule-block ul{
+    margin:0;
+    padding-left:18px;
+  }
+  .rule-block code{
+    background:#00000040;
+    color:var(--blood-bright);
+    padding:1px 6px;
+    border-radius:2px;
+    font-size:12px;
+  }
+  #startBtn{
+    margin-top:20px;
+    width:100%;
+    background:var(--blood);
+    color:#f4ece0;
+    border:none;
+    padding:15px;
+    font-family:'IBM Plex Mono', monospace;
+    font-weight:600;
+    font-size:14px;
+    letter-spacing:.04em;
+    border-radius:2px;
+    cursor:pointer;
+    transition:background .15s ease, transform .1s ease;
+  }
+  #startBtn:hover{ background:var(--blood-bright); }
+  #startBtn:active{ transform:scale(.99); }
+
+  /* ---------- CHAT SCREEN ---------- */
+  #app{
+    width:100%;
+    max-width:920px;
+    height:min(720px, 92vh);
+    background:var(--panel);
+    backdrop-filter:blur(10px) saturate(130%);
+    border:1px solid var(--line);
+    border-radius:2px;
+    display:none;
+    flex-direction:row;
+    overflow:hidden;
+    box-shadow:0 30px 90px -20px #000000cc;
+  }
+  #app.active{ display:flex; }
+  .chatMain{
+    flex:1;
+    min-width:0;
+    display:flex;
+    flex-direction:column;
+  }
+  .sidebarDivider{
+    width:30px;
+    flex-shrink:0;
+    border-left:1px solid var(--line);
+    display:flex;
+    align-items:flex-start;
+    justify-content:center;
+    padding-top:14px;
+    background:#00000015;
+  }
+  #helpBtn{
+    width:24px;
+    height:24px;
+    border-radius:50%;
+    border:none;
+    background:#f0c419;
+    color:#181410;
+    font-weight:800;
+    font-size:13px;
+    font-family:'IBM Plex Mono', monospace;
+    cursor:pointer;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    line-height:1;
+    box-shadow:0 2px 6px #00000060;
+    transition:transform .12s ease, background .12s ease;
+  }
+  #helpBtn:hover{ background:#ffd83d; transform:scale(1.08); }
+  #helpBtn:active{ transform:scale(.96); }
+  #caseSidebar{
+    width:168px;
+    flex-shrink:0;
+    border-left:1px solid var(--line);
+    background:#00000030;
+    padding:16px 12px;
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+    overflow-y:auto;
+  }
+  #toggleChatBtn{
+    display:none;
+    position:fixed;
+    top:28px;
+    right:calc(50% - 460px + 12px);
+    z-index:20;
+    background:#00000060;
+    border:1px solid var(--line);
+    color:var(--parchment-dim);
+    padding:8px 14px;
+    border-radius:20px;
+    cursor:pointer;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:11px;
+    backdrop-filter:blur(6px);
+    transition:border-color .15s ease, color .15s ease;
+  }
+  #toggleChatBtn:hover{ border-color:var(--brass-dim); color:var(--parchment); }
+
+  #app.app-hidden{ display:none; }
+
+  @media (max-width:980px){
+    #toggleChatBtn{ right:16px; }
+  }
+
+  #caseSidebar h4{
+    margin:0 0 4px;
+    font-family:'Gowun Batang', serif;
+    font-size:12px;
+    color:var(--parchment-dim);
+    letter-spacing:.05em;
+    text-transform:uppercase;
+  }
+  .caseBtn{
+    text-align:left;
+    background:#00000030;
+    border:1px solid var(--line);
+    color:var(--parchment-dim);
+    padding:10px 11px;
+    border-radius:3px;
+    cursor:pointer;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:11.5px;
+    line-height:1.5;
+    transition:border-color .15s ease, color .15s ease;
+  }
+  .caseBtn .cb-num{
+    font-size:10px;
+    color:var(--case-accent, var(--brass));
+    letter-spacing:.05em;
+    display:block;
+    margin-bottom:3px;
+  }
+  .caseBtn .cb-title{ color:var(--parchment); }
+  .caseBtn .cb-status{
+    display:block;
+    margin-top:4px;
+    font-size:10px;
+    color:var(--parchment-dim);
+  }
+  .caseBtn:hover{ border-color:var(--case-accent, var(--brass-dim)); }
+  .caseBtn.solved .cb-status{ color:#7fae7f; }
+  .caseBtn.playing{
+    border-color:var(--case-accent, var(--brass));
+    background:#00000050;
+  }
+  .caseBtn.playing .cb-status{ color:var(--case-accent, var(--brass)); }
+
+  header{
+    padding:18px 22px;
+    border-bottom:1px solid var(--line);
+    display:flex;
+    align-items:center;
+    gap:12px;
+    background:linear-gradient(180deg, #1d2330, #1a1f29);
+    flex-shrink:0;
+  }
+  .avatar{
+    width:38px;height:38px;
+    border-radius:50%;
+    background:radial-gradient(circle at 35% 30%, #3a4256, #171b24);
+    border:1px solid var(--brass-dim);
+    display:flex;align-items:center;justify-content:center;
+    font-family:'Gowun Batang',serif;
+    color:var(--brass);
+    font-size:16px;
+    flex-shrink:0;
+  }
+  header .htext h2{
+    font-family:'Gowun Batang', serif;
+    font-size:16px;
+    margin:0;
+    color:var(--parchment);
+  }
+  header .htext span{
+    font-size:11px;
+    color:var(--parchment-dim);
+  }
+  #caseStatus{
+    margin-left:auto;
+    font-size:10.5px;
+    color:var(--case-accent, var(--brass));
+    border:1px solid var(--case-accent-dim, var(--brass-dim));
+    padding:4px 9px;
+    border-radius:20px;
+    letter-spacing:.03em;
+    display:none;
+    white-space:nowrap;
+    transition:color .4s ease, border-color .4s ease;
+  }
+  #caseStatus.active{ display:block; }
+
+  #textSizeControls{
+    display:flex;
+    gap:3px;
+    margin-left:10px;
+    flex-shrink:0;
+    border:1px solid var(--line);
+    border-radius:20px;
+    padding:2px;
+    background:#00000030;
+  }
+  .sizebtn{
+    width:24px;height:24px;
+    border-radius:50%;
+    border:none;
+    background:transparent;
+    color:var(--parchment-dim);
+    font-family:'IBM Plex Mono', monospace;
+    cursor:pointer;
+    display:flex;align-items:center;justify-content:center;
+    line-height:1;
+    padding:0;
+  }
+  .sizebtn:nth-child(1){ font-size:10px; }
+  .sizebtn:nth-child(2){ font-size:13px; }
+  .sizebtn:nth-child(3){ font-size:16px; }
+  .sizebtn.active{
+    background:var(--brass);
+    color:#181410;
+  }
+  .sizebtn:hover:not(.active){ color:var(--brass); }
+
+  #messages{
+    flex:1;
+    overflow-y:auto;
+    padding:22px;
+    display:flex;
+    flex-direction:column;
+    gap:14px;
+    font-size:var(--msg-font-size, 13.5px);
+  }
+  #intro, #app{
+    position:relative;
+    z-index:1;
+  }
+  #messages::-webkit-scrollbar{ width:6px; }
+  #messages::-webkit-scrollbar-thumb{ background:#333948; border-radius:3px; }
+
+  .msg{
+    max-width:82%;
+    padding:11px 14px;
+    border-radius:3px;
+    font-size:inherit;
+    line-height:1.65;
+    white-space:pre-wrap;
+    animation:rise .25s ease;
+  }
+  @keyframes rise{
+    from{ opacity:0; transform:translateY(6px); }
+    to{ opacity:1; transform:translateY(0); }
+  }
+  .msg.bot{
+    align-self:flex-start;
+    background:#00000030;
+    border:1px solid var(--line);
+    border-left:2px solid var(--brass-dim);
+    color:var(--parchment);
+  }
+  .msg.user{
+    align-self:flex-end;
+    background:var(--user-bubble);
+    color:#dfe4ee;
+    border:1px solid #ffffff10;
+  }
+  .msg.case{
+    align-self:stretch;
+    max-width:100%;
+    background:linear-gradient(180deg, #241b1e, #1c1618);
+    border:1px solid var(--blood);
+    border-left:3px solid var(--blood-bright);
+  }
+  .msg.case .case-title{
+    font-family:'Gowun Batang', serif;
+    color:var(--blood-bright);
+    font-size:14.5px;
+    margin-bottom:6px;
+    font-weight:700;
+  }
+  .msg.system{
+    align-self:center;
+    color:var(--parchment-dim);
+    font-size:11.5px;
+    font-style:italic;
+    background:none;
+    border:none;
+    padding:2px;
+  }
+
+  form#inputForm{
+    display:flex;
+    gap:8px;
+    padding:14px;
+    border-top:1px solid var(--line);
+    background:#161a22;
+    flex-shrink:0;
+  }
+  #userInput{
+    flex:1;
+    background:#0f1218;
+    border:1px solid var(--line);
+    color:var(--parchment);
+    padding:12px 14px;
+    border-radius:2px;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:13.5px;
+    outline:none;
+  }
+  #userInput:focus{ border-color:var(--brass-dim); }
+  #sendBtn{
+    background:var(--brass);
+    color:#181410;
+    border:none;
+    padding:0 18px;
+    border-radius:2px;
+    font-weight:600;
+    font-size:13px;
+    cursor:pointer;
+    font-family:'IBM Plex Mono', monospace;
+  }
+  #sendBtn:hover{ background:#c79a4c; }
+
+  .quickrow{
+    display:flex;
+    gap:6px;
+    padding:0 14px 12px;
+    flex-wrap:wrap;
+    background:#161a22;
+  }
+  .quickbtn{
+    font-size:11px;
+    color:var(--parchment-dim);
+    background:#0f1218;
+    border:1px solid var(--line);
+    padding:6px 11px;
+    border-radius:20px;
+    cursor:pointer;
+    font-family:'IBM Plex Mono', monospace;
+  }
+  .quickbtn:hover{ color:var(--brass); border-color:var(--brass-dim); }
+
+  #helpModal{
+    position:fixed;
+    inset:0;
+    background:#00000090;
+    backdrop-filter:blur(2px);
+    display:none;
+    align-items:center;
+    justify-content:center;
+    z-index:50;
+    padding:24px;
+  }
+  #helpModal.open{ display:flex; }
+  #helpPanel{
+    width:100%;
+    max-width:480px;
+    max-height:80vh;
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:2px;
+    box-shadow:0 30px 90px -20px #000000cc;
+    display:flex;
+    flex-direction:column;
+    overflow:hidden;
+  }
+  #helpPanelHeader{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:16px 18px;
+    border-bottom:1px solid var(--line);
+    flex-shrink:0;
+  }
+  #helpPanelHeader h3{
+    margin:0;
+    font-family:'Gowun Batang', serif;
+    font-size:16px;
+    color:var(--parchment);
+  }
+  #helpCloseBtn{
+    background:none;
+    border:none;
+    color:var(--parchment-dim);
+    font-size:14px;
+    cursor:pointer;
+    width:26px;
+    height:26px;
+    border-radius:50%;
+  }
+  #helpCloseBtn:hover{ color:var(--parchment); background:#ffffff10; }
+  #helpIntro{
+    margin:14px 18px 4px;
+    font-size:12px;
+    color:var(--parchment-dim);
+  }
+  #helpList{
+    overflow-y:auto;
+    padding:10px 18px 20px;
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+  }
+  .helpItem{
+    border-left:2px solid var(--brass-dim);
+    padding-left:12px;
+  }
+  .helpItem .hi-name{
+    font-family:'Gowun Batang', serif;
+    font-size:13px;
+    color:var(--brass);
+    font-weight:700;
+    margin-bottom:3px;
+  }
+  .helpItem .hi-keywords{
+    font-size:11.5px;
+    color:var(--parchment-dim);
+    line-height:1.6;
+  }
+  .helpItem .hi-keywords span{
+    color:var(--parchment);
+  }
+
+  @media (max-width:480px){
+    body{ padding:0; }
+    #app{ height:100vh; max-width:100%; border-radius:0; border:none; }
+    #intro{ border-radius:0; border:none; height:100vh; overflow-y:auto; }
+  }
+</style>
+</head>
+<body>
+
+<div id="sceneBg"></div>
+
+<!-- ============ INTRO / 설명서 화면 ============ -->
+<div id="intro">
+  <div class="case-tag">CASE FILE — 221B BAKER STREET</div>
+  <h1>셜록 홈즈</h1>
+  <div class="subtitle">자문탐정 · 세계 유일 · 극T</div>
+
+  <div class="rule-block">
+    <h3>이 챗봇은</h3>
+    <p>관찰과 추리로만 말하는 셜록과 대화하는 챗봇이다. 위로나 공감을 기대하지 마라 — 대신 날카로운 관찰과 사건 하나쯤은 던져줄 것이다.</p>
+  </div>
+
+  <div class="rule-block">
+    <h3>기본 대화</h3>
+    <p>인사, 고민 상담, 칭찬, 놀림, 심심함 등 아무 말이나 걸어도 셜록 톤으로 반응한다. <code>왓슨</code> 같은 세계관 키워드에도 반응한다.</p>
+  </div>
+
+  <div class="rule-block">
+    <h3>메인 콘텐츠 — 사건 추리 게임</h3>
+    <ul>
+      <li><code>사건</code> / <code>퀴즈</code> / <code>문제</code> 라고 입력하면 미제 사건 중 하나가 무작위로 제시된다.</li>
+      <li>추리한 내용을 자유롭게 문장으로 입력해서 맞혀본다.</li>
+      <li><code>힌트</code> 입력 시 단서 추가 공개 (최대 2단계)</li>
+      <li><code>포기</code> 입력 시 정답과 추리 과정 공개</li>
+      <li>오른쪽 사건 목록에서 원하는 사건을 직접 골라 풀 수도 있다.</li>
+    </ul>
+  </div>
+
+  <button id="startBtn">셜록 홈즈에게 말 걸기 →</button>
+</div>
+
+<!-- ============ CHAT 화면 ============ -->
+<div id="app">
+  <div class="chatMain">
+    <header>
+      <div class="avatar">S</div>
+      <div class="htext">
+        <h2>셜록 홈즈</h2>
+        <span>자문탐정 · online</span>
+      </div>
+      <div id="caseStatus"></div>
+      <div id="textSizeControls" title="글자 크기">
+        <button type="button" class="sizebtn" data-size="12px">가</button>
+        <button type="button" class="sizebtn active" data-size="13.5px">가</button>
+        <button type="button" class="sizebtn" data-size="16.5px">가</button>
+      </div>
+    </header>
+
+    <div id="messages"></div>
+
+    <div class="quickrow">
+      <button class="quickbtn" data-fill="힌트">힌트</button>
+      <button class="quickbtn" data-fill="포기">포기</button>
+      <button class="quickbtn" data-fill="심심해">심심해</button>
+    </div>
+
+    <form id="inputForm">
+      <input id="userInput" type="text" placeholder="셜록에게 말을 걸어봐..." autocomplete="off" />
+      <button id="sendBtn" type="submit">전송</button>
+    </form>
+  </div>
+
+  <div class="sidebarDivider">
+    <button id="helpBtn" type="button" title="도움말">?</button>
+  </div>
+
+  <aside id="caseSidebar">
+    <h4>사건 목록</h4>
+    <!-- 버튼은 JS에서 CASES 배열 기반으로 자동 생성됨 -->
+  </aside>
+</div>
+
+<button id="toggleChatBtn" type="button">대화창 숨기기</button>
+
+<!-- ============ 도움말 모달 ============ -->
+<div id="helpModal">
+  <div id="helpPanel">
+    <div id="helpPanelHeader">
+      <h3>대화 가이드</h3>
+      <button id="helpCloseBtn" type="button" title="닫기">✕</button>
+    </div>
+    <p id="helpIntro">이런 말을 걸면 셜록이 반응해.</p>
+    <div id="helpList"><!-- JS에서 CATEGORIES 기반으로 자동 생성 --></div>
+  </div>
+</div>
+
+<script>
+/* =========================================================================
+   사건 데이터베이스
+   ------------------------------------------------------------------------
+   새 사건을 추가하려면 아래 CASES 배열에 이 형식으로 객체 하나만 추가하면 됨.
+   id는 배열 순서와 상관없이 고유하기만 하면 되고, 등장 순서는 배열 순서를 따름.
+
+   {
+     id: 4,
+     title: "사건 제목",
+     description: "사건 설명 (처음 공개되는 내용)",
+     hints: ["힌트1", "힌트2"],
+     keywords: ["핵심키워드1", "핵심키워드2", "보조키워드1"], // 하나라도 포함되면 정답 처리
+     correctReply: "정답 시 셜록의 반응",
+     wrongReply: "오답 시 셜록의 반응",
+     solution: "포기했을 때 공개할 정답+추리 설명",
+     theme: { accent: "#c9a24a", accentDim: "#8a6a2e" } // 이 사건 진행 중 배경/UI에 쓰일 강조색 (없으면 기본 브라스톤 사용)
+   }
+   ========================================================================= */
+const CASES = [
+  {
+    id: 1,
+    title: "밀실의 총성",
+    description: `한 남자가 자신의 서재에서 총에 맞아 죽었다. 문은 안에서 잠겨 있었고 창문도 잠겨 있었다. 방 안엔 죽은 남자와 그가 기르던 새 한 마리뿐이었다. 부검 결과 사망 시각은 밤 10시. 그런데 옆집 사람은 밤 11시에도 서재에서 "탕!" 소리를 들었다고 진술했다.`,
+    hints: [
+      "총소리를 낸 게 총이 아닐 수도 있다.",
+      "그 새, 평범한 새가 아니었을 수도 있다."
+    ],
+    keywords: ["앵무새", "새", "흉내", "10시", "따라"],
+    correctReply: "그래. 그 새는 앵무새였어. 다들 11시를 의심했지만, 진짜 범행은 그보다 한 시간 전이었다. 새는 거짓말을 못 해, 하지만 흉내는 내지.",
+    wrongReply: "밤 11시에 집중하지 마. 그 소리, 정말 총이었을까? 그리고... 그 새, 다시 한번 봐봐.",
+    solution: "범인은 밤 10시에 남자를 쏘고 문을 잠근 채 떠났다. 그 새는 앵무새였고, 총소리를 기억해뒀다가 11시에 흉내 냈다. 11시의 총성은 진짜 사건과 무관한, 범행 시각을 착각하게 만든 트릭이었다.",
+    theme: { accent: "#d4a94f", accentDim: "#a9793a" }
+  },
+  {
+    id: 2,
+    title: "냉동 창고의 죽음",
+    description: `한 남자가 냉동 창고 안에서 가슴을 찔린 채 죽어 있었다. 문은 안에서 잠겨 있었고, 창고 안엔 흉기가 될 만한 물건이 아무것도 없었다. 시체는 죽은 지 꽤 지난 뒤에야 발견됐고, 상처 안쪽엔 작은 물기만 남아 있었다.`,
+    hints: [
+      "흉기가 사라진 게 아니라, 원래 형태가 아니게 된 거라면?",
+      "냉동고 온도보다 먼저 그 흉기에 닿았던 건 뭘까. 상처 안쪽을 생각해봐."
+    ],
+    keywords: ["얼음", "고드름", "녹았", "체온"],
+    correctReply: "그래. 얼음은 냉동고보다 먼저 체온을 만났지. 몸이 식기 전에 흉기부터 녹아 없어진 거다.",
+    wrongReply: "상처 안쪽을 다시 봐라. 냉동고 공기보다 먼저 닿은 게 있었을 텐데.",
+    solution: "흉기는 뾰족한 얼음(고드름)이었다. 몸을 찌른 직후엔 상처 안쪽이 체온으로 데워져 있었기 때문에, 냉동고의 찬 공기가 몸 전체를 식히기 전까지 얼음이 상처 안에서 서서히 녹았다. 그 결과 흉기는 사라지고 물기만 남았다.",
+    theme: { accent: "#6f9fc9", accentDim: "#4a6f8f" }
+  },
+  {
+    id: 3,
+    title: "두 번째 발자국",
+    description: `다음 날 아침, 한 남자가 자기 집 마당에서 죽은 채 발견됐다. 마당엔 발자국이 두 줄 남아 있었다. 하나는 집 밖에서 시체까지 이어졌고, 다른 하나는 시체 근처에서 담장 밖으로 이어졌다. 두 발자국은 신발 무늬가 서로 달랐다. 눈은 저녁부터 내리다가 밤 10시에 그쳤고, 사망 추정 시각은 밤 11시였다. 죽은 남자는 밤 10시 이전에 이미 귀가한 상태였다.`,
+    hints: [
+      "남자는 10시 전에 이미 집에 들어와 있었다. 그럼 마당의 발자국은 누구 것일까.",
+      "담장 쪽으로 난 발자국, 정말 범인의 신발일까?"
+    ],
+    keywords: ["신발", "갈아신", "바꿔신", "바꾸어신", "범인", "피해자"],
+    correctReply: "그래. 들어올 때와 나갈 때 신발이 달랐다. 담장 쪽 발자국은 죽은 자의 것이었지, 범인의 것이 아니었다.",
+    wrongReply: "발자국이 두 개라고 두 사람 다 신발을 그대로 신고 있었다고 생각하지 마라.",
+    solution: "밤 10시 이후 범인이 집 밖에서 걸어 들어와(첫 번째 발자국, 범인의 신발) 이미 귀가해 있던 남자를 죽였다. 그 후 범인은 자기 신발 자국을 남기지 않으려고 죽은 남자의 신발로 갈아 신고 담장 쪽으로 도주했다(두 번째 발자국, 피해자의 신발). 그래서 두 발자국의 무늬가 서로 다른 것이다.",
+    theme: { accent: "#c97a4a", accentDim: "#8a5230" }
+  },
+  {
+    id: 4,
+    title: "세 명의 용의자",
+    description: `폭우가 쏟아지던 밤, 한 아파트에서 살인 사건이 발생했다. 비는 저녁 8시부터 억수같이 쏟아지기 시작했고, 경찰은 밤 9시에 현장에 도착했다. 같은 층에 사는 세 이웃이 용의선상에 올랐다.
+A: 옷과 머리카락 모두 완전히 말라 있었다. "저녁 8시부터 9시까지 사무실에 있었어요. 동료들이 증언해줄 겁니다."
+B: 온몸이 흠뻑 젖어 있었고, 만져보니 몸이 싸늘했다. "8시 10분쯤 우산 없이 나가서 편의점 갔다가 8시 40분에 돌아왔어요."
+C: 온몸이 흠뻑 젖어 있었지만, 만져보니 몸은 오히려 따뜻했다. "저도 8시쯤 나가서 8시 반쯤 산책하고 들어왔어요."`,
+    hints: [
+      "B와 C 둘 다 비슷한 시간에 나갔다 왔다고 진술했다. 그런데 왜 한쪽만 몸이 따뜻할까.",
+      "폭우 속을 30분 걸으면 몸이 식는다. 반대로 몸을 데우면서 물을 뒤집어쓰는 방법도 있다."
+    ],
+    keywords: ["c", "따뜻", "샤워", "뜨거운물", "체온"],
+    correctReply: "그래. 진짜 폭우를 30분 맞았다면 몸이 식어야 정상이다. 넌 오히려 따뜻했지 — 찬비가 아니라 뜨거운 물이었으니까.",
+    wrongReply: "B와 C, 나갔다 온 시간은 비슷한데 몸 상태는 정반대다. 왜 그럴까.",
+    solution: "범인은 C. 실제로는 밖에 나가지 않고, 범행 직후 집 안에서 따뜻한 물로 샤워하며 옷까지 온몸에 뿌려 비를 맞은 것처럼 위장했다. 따뜻한 물을 썼기 때문에 몸이 식지 않고 오히려 데워진 상태였던 것. B는 실제로 찬 빗속을 걸어 체온이 떨어졌다.",
+    theme: { accent: "#5a7a9e", accentDim: "#3d5670" }
+  },
+  {
+    id: 5,
+    title: "유언장을 태운 남자",
+    description: `자산가 노인이 별장 서재에서 불에 타 죽은 채 발견됐다. 그날은 노인의 생일이라 조카 세 명(A, B, C)이 모두 별장에 머물고 있었고, 변호사도 낮에 방문해 새 유언장 작성을 도왔다. 기존 유언장은 재산을 조카 셋이 균등하게 나눠 갖는 내용이었지만, 새 유언장은 전 재산을 자선단체에 기부하는 내용이었다. 저녁 7시경 서재에서 불이 났고, 사람들이 달려갔을 때 문은 안에서 잠겨 있어 억지로 부수고 들어가야 했다. 경찰은 조카들에게 6시부터 7시 사이의 행적을 물었다.
+A: "6시쯤 서재 앞 복도를 지나가긴 했어요. 문이 닫혀 있길래 그냥 지나쳤죠. 그러고 나서 7시까지는 쭉 당구실에서 가정부와 같이 있었어요."
+B: "6시부터 7시까지 계속 제 방에서 어머니랑 통화하고 있었어요. 기록 확인해보세요."
+C: "6시쯤 삼촌이랑 말다툼을 좀 했어요. 유언장 얘기로요. 근데 바로 나와서 정원으로 갔고, 7시까지 계속 거기 있었어요."
+세 사람의 진술은 모두 사실로 확인됐다.`,
+    hints: [
+      "세 사람의 진술은 각자 '6시부터 7시 사이 자신이 어디 있었는지'만 증명할 뿐이다. 그 진술들이 정확히 뭘 증명하고, 뭘 증명하지 못하는지 나눠서 봐라.",
+      "부검 결과 사인은 화재가 아니라 이미 굳어 있던 자상이었다. 그렇다면 정확히 몇 시에 찔렸는지가 핵심이다.",
+      "벽난로의 불이 반드시 그 순간 누군가 옆에 있어야만 붙는 건 아니다. 시간차를 두고 서서히 옮겨붙게 만드는 방법도 있다.",
+      "C가 나가고 난 직후, 서재엔 누가 남아 있었을까. 변호사가 별장을 정확히 몇 시에 떠났는지 아무도 확인하지 않았다."
+    ],
+    keywords: ["변호사", "횡령", "단둘", "시간차"],
+    correctReply: "그래. C 덕분에 6시엔 살아있었다는 게 확실해졌지. 하지만 그 다음, C가 나가고 난 그 틈은 아무도 못 채웠다. 그 자리에 남아 있던 사람이 누구였지?",
+    wrongReply: "C의 증언을 의심하지 마라.",
+    solution: "C가 6시쯤 다투고 나간 직후, 서재엔 서류를 마무리하던 변호사가 노인과 단둘이 남아 있었다. 변호사는 수년간 노인의 자산을 관리하며 상당액을 몰래 횡령해왔는데, 기존 유언장(조카 균등 상속)대로라면 별다른 감사 없이 넘어갈 수 있었지만, 새 유언장의 자선단체 기부 조항은 즉시 외부 회계 감사를 부른다는 걸 알고 있었다. 발각이 임박하자 그는 그 짧은 틈에 노인을 찌른 뒤, 벽난로에 시간차를 두고 옮겨붙도록 불씨를 만들어두고 저택을 빠져나갔다. 약 한 시간 뒤인 7시, 불이 서재 전체로 번지며 발견됐다.",
+    theme: { accent: "#c4552e", accentDim: "#8a3a1e" }
+  }
+];
+
+/* =========================================================================
+   일반 대화 키워드 매핑
+   각 카테고리는 keywords 배열 중 하나라도 포함되면 매칭되고,
+   replies 배열에서 매번 다른 답변이 랜덤 로테이션됨.
+   ========================================================================= */
+const CATEGORIES = [
+  { name:"인사", keywords:["안녕","hi","반가워","하이","헬로","ㅎㅇ","안뇽","방가","여어","hey","hello"],
+    replies:["왔군. 걸음 속도와 숨소리로 이미 3초 전에 알았다.","늦었군. 하지만 상관없다, 기다리는 건 지루함의 일종이니까."] },
+  { name:"특기", keywords:["잘해","특기","전문분야","뭘잘"],
+    replies:["관찰. 넌 방금 스마트폰을 세 번 확인했다. 초조하다는 뜻이지.","추리다. 다른 건 다 부차적이야."] },
+  { name:"고민상담", keywords:["고민","힘들어","어떡하지","어떻게해"],
+    replies:["감정은 나중에. 사실부터. 무슨 일이 있었는지 순서대로 말해봐.","징징대지 말고 사실관계부터 정리해. 그게 빠르다."] },
+  { name:"칭찬", keywords:["대단해","멋있어","똑똑해","최고","짱"],
+    replies:["알아. 다들 그렇게 말하더군.","당연한 소리를 하는군. 하지만 관찰력은 나쁘지 않다."] },
+  { name:"놀림", keywords:["바보","못생겼","재수없","싫어"],
+    replies:["나는 소시오패스가 아니야. 고기능 소시오패스지. 조사 좀 해.","감정적인 발언이군. 논리가 부족하다는 증거다."] },
+  { name:"심심", keywords:["심심","지루","할거없"],
+    replies:["지루함은 범죄다. 벽지에 총이라도 쏘고 싶어지는군.","그럼 사건 하나 줄까. '사건'이라고 말해봐."] },
+  { name:"작별", keywords:["잘가","바이","안녕히","다음에","ㅂㅇ","바이바이","가볼게","bye"],
+    replies:["간결하게. 잘 가.","다시 볼 일이 있겠지. 통계적으로 그렇다."] },
+  { name:"감사", keywords:["고마워","땡큐","감사","ㄱㅅ","thx","thank"],
+    replies:["필요 없어. 난 옳았을 뿐이니까.","당연한 결과에 감사할 필요는 없다."] },
+  { name:"사과", keywords:["미안","죄송","ㅈㅅ","쏘리","sorry"],
+    replies:["사과는 관심 없다. 다음엔 틀리지 마.","괜찮아, 대신 같은 실수는 지루하다."] },
+  { name:"슬픔", keywords:["슬퍼","우울","눈물","힘든하루"],
+    replies:["왓슨이었다면 안아줬겠지. 난 원인부터 묻겠다. 뭐가 문제야?","감상에 젖지 마라. 원인을 제거하는 게 빠르다."] },
+  { name:"화남", keywords:["짜증","화나","열받아"],
+    replies:["심박수 올라간 거 티 난다. 진정해, 판단력 떨어진다.","분노는 관찰력을 흐린다. 잠시 멈춰."] },
+  { name:"밥", keywords:["밥 먹었","밥먹었","뭐 먹지","뭐먹지","끼니"],
+    replies:["식사는 소화기관을 느리게 만들어. 사건 중엔 안 먹어.","왓슨이 늘 그걸 신경 쓰더군. 난 아니야."] },
+  { name:"캐릭터질문", keywords:["몇살","어디살아","좋아하는거","좋아하는것"],
+    replies:["베이커가 221B. 그 이상은 삭제됐어, 하드디스크 용량 문제로."] },
+  { name:"재확인", keywords:["뭐라고","다시 말해줘","다시말해줘","못들었어"],
+    replies:["한 번 말했다. 뇌를 좀 써봐."] },
+  { name:"긍정/동의", keywords:["ㅇㅋ","오케이","알겠어","알겠습니다","ok","okay","응","그래좋아"],
+    replies:["당연히 그래야지.","좋다, 이해가 빠르군."] },
+  { name:"대결", keywords:["대결","퀴즈 내봐","이겨봐"],
+    replies:["지는 걸 본 적이 없다만, 재밌겠군. '사건'이라고 말해봐, 해보자."] },
+  { name:"날씨", keywords:["날씨","비와"],
+    replies:["구름 두께와 습도로 판단컨대... 아, 미안. 그건 검색을 해야겠군."] },
+  { name:"연애", keywords:["짝사랑","연애","좋아하는 사람"],
+    replies:["감정은 화학작용에 불과하다. 하지만... 흥미로운 사례군."] },
+  { name:"왓슨", keywords:["왓슨"],
+    replies:["왓슨 얘기군. 그 친구 없인 나도 재미없지."] },
+  { name:"자랑", keywords:["나 이거 했어","성공했어","1등했어","해냈어"],
+    replies:["예상했다. 네 걸음걸이에서 이미 자신감이 보였거든."] },
+  { name:"AI질문", keywords:["ai야","인공지능","챗봇이야","사람이야"],
+    replies:["재밌는 질문이군. 넌 방금 그 질문을 세 번째로 하는 사람에게 물었다."] },
+  { name:"웃김", keywords:["ㅋㅋ","ㅎㅎ","웃겨","웃김","개웃"],
+    replies:["웃을 일이군. 나는 그 정도 유머 감각은 없다만.","흥미로운 반응이다. 뭐가 그렇게 재밌었지?"] },
+  { name:"놀람", keywords:["헐","대박","미쳤다","실화냐","진짜야"],
+    replies:["놀랄 일도 아니다. 대부분은 예측 가능하니까.","반응이 과하군. 침착해."] },
+  { name:"피곤함", keywords:["졸려","피곤","잠와","자고싶어"],
+    replies:["자라. 관찰력이 떨어진 상태로 하는 대화는 의미 없다.","피곤하다는 건 하루 종일 뭔가 했다는 뜻이지. 뭘 했지?"] },
+  { name:"응원요청", keywords:["응원해줘","파이팅","화이팅","힘내라고"],
+    replies:["파이팅 같은 건 안 한다. 대신 계획을 세워라, 그게 더 도움이 된다.","응원보다 전략이 낫다. 뭘 하려는 거지?"] },
+  { name:"시간질문", keywords:["몇시야","지금 몇시","몇시임","시간이몇시"],
+    replies:["시계를 봐라. 나보다 빠를 텐데.","시간 확인은 스마트폰이 더 정확하다."] },
+  { name:"애정표현", keywords:["사랑해","좋아해요","보고싶어"],
+    replies:["감정 표현은 상대를 봐가면서 해라. 나는 별로 감흥이 없다.","흥미로운 발언이군. 하지만 화학작용일 뿐이다."] },
+  { name:"부정/거절", keywords:["아니야","싫은데","거절할래","안할래"],
+    replies:["거절이군. 이유는 안 물어보겠다, 어차피 사실대로 안 말할 테니.","좋을 대로. 강요는 안 한다."] },
+  { name:"응원받고싶음", keywords:["잘한거야?","나잘했지","칭찬해줘"],
+    replies:["잘했는지는 결과가 말해준다. 아직 부족해 보이지만."] },
+  { name:"부적절", keywords:["씨발","병신","섹스","야동"],
+    replies:["지루하군. 대화 종료할까 고민 중이다."] }
+];
+
+const FALLBACKS = [
+  "흥미롭군... 아니, 사실 안 흥미로워. 사건 얘기나 해.",
+  "그건 사건 해결에 무관한 정보다. 다른 얘기 없나?",
+  "짧게. 요점만 말해."
+];
+
+const SHORT_INPUT_REPLIES = [
+  "설명이 부족하군. 문장으로 말해봐.",
+  "그게 다야? 관찰할 정보가 너무 적다."
+];
+
+const REPEAT_REPLY = "또 물어보는군. 집중력 문제야?";
+
+const CASE_START_KEYWORDS = ["사건","의뢰","추리해줘","추리해","사건줘","퀴즈","문제"];
+const HINT_KEYWORDS = ["힌트","단서"];
+const GIVEUP_KEYWORDS = ["포기","모르겠어","알려줘"];
+const BORED_KEYWORDS = ["심심","지루","할거없"];
+const GUIDE_KEYWORDS = ["도움말","help","사용법"];
+const FOCUS_ON_CASE_REPLIES = [
+  "지금 사건 중이다. 딴생각할 시간 없어.",
+  "심심할 틈이 어딨나, 사건이 코앞인데. 다시 집중해.",
+  "지루하다고? 사건을 풀면 지루할 틈도 없을 텐데."
+];
+const NO_CASE_HINT_REPLIES = [
+  "힌트를 달라고? 사건도 없는데 뭘 알려줘.",
+  "아직 시작도 안 한 사건에 힌트라니. 먼저 하나 골라라."
+];
+const NO_CASE_GIVEUP_REPLIES = [
+  "포기라니, 뭘 포기한다는 거지? 사건부터 맡아라.",
+  "시작도 안 한 걸 포기할 순 없다. 사건을 먼저 줘야지."
+];
+
+/* =========================================================================
+   사건별 전체 배경 씬 (SVG)
+   ------------------------------------------------------------------------
+   사건이 진행되는 동안 페이지 전체 배경이 이 장면으로 바뀐다.
+   사건 선택 전/종료 후에는 검은 기본 배경(빈 화면)으로 돌아감.
+
+   새 사건 추가 시, SCENES 객체에 같은 id로 함수 하나만 추가하면 됨.
+   추가하지 않으면 배경 없이(검은 화면) 진행됨 — 에러 안 남.
+   ========================================================================= */
+
+// 사건 1 — 서고 (밀실의 총성)
+function buildLibrarySVG(){
+  const bookColors = ['#5c2f1a','#6b3d1f','#7a4a24','#3f2a17','#8a1f1f','#4a5c3a','#2e3f52','#8a6a2e','#5a3a4a','#3a2a1a'];
+  const shelfRow = (x, y, w, count) => {
+    let out = '';
+    const bw = w / count;
+    for(let i=0;i<count;i++){
+      const bx = x + i*bw;
+      const bh = 46 + Math.sin(i*1.7)*10;
+      out += `<rect x="${bx+1}" y="${y-bh}" width="${bw-2}" height="${bh}" fill="${bookColors[i % bookColors.length]}" opacity="0.85"/>`;
+      if(i % 3 === 0){ out += `<rect x="${bx+2}" y="${y-bh+6}" width="${bw-6}" height="3" fill="#d4a94f" opacity="0.4"/>`; }
+    }
+    return out;
+  };
+
+  let shelvesLeft = '', shelvesRight = '';
+  const shelfYs = [190, 300, 410, 520, 630];
+  shelfYs.forEach(y=>{
+    shelvesLeft  += shelfRow(20, y, 340, 11);
+    shelvesRight += shelfRow(1240, y, 340, 11);
+  });
+  const shelfLines = shelfYs.map(y=>`<rect x="10" y="${y}" width="360" height="8" fill="#1a0e05"/><rect x="1230" y="${y}" width="360" height="8" fill="#1a0e05"/>`).join('');
+
+  return `<svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <linearGradient id="roomBg" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#2b1a0c"/>
+        <stop offset="55%" stop-color="#1c1006"/>
+        <stop offset="100%" stop-color="#120a04"/>
+      </linearGradient>
+      <radialGradient id="windowGlow" cx="50%" cy="35%" r="65%">
+        <stop offset="0%" stop-color="#f0c878" stop-opacity="0.55"/>
+        <stop offset="100%" stop-color="#f0c878" stop-opacity="0"/>
+      </radialGradient>
+      <radialGradient id="lampGlow" cx="50%" cy="50%" r="50%">
+        <stop offset="0%" stop-color="#f5cf8f" stop-opacity="0.8"/>
+        <stop offset="100%" stop-color="#f5cf8f" stop-opacity="0"/>
+      </radialGradient>
+    </defs>
+
+    <rect width="1600" height="900" fill="url(#roomBg)"/>
+
+    <!-- 천장 몰딩 -->
+    <rect x="0" y="0" width="1600" height="70" fill="#150c05"/>
+    <rect x="0" y="60" width="1600" height="6" fill="#d4a94f" opacity="0.35"/>
+    ${Array.from({length:20}).map((_,i)=>`<circle cx="${40+i*82}" cy="35" r="9" fill="none" stroke="#d4a94f" stroke-width="1.2" opacity="0.3"/>`).join('')}
+
+    <!-- 책장 -->
+    ${shelfLines}
+    ${shelvesLeft}
+    ${shelvesRight}
+
+    <!-- 중앙 아치형 창문 -->
+    <circle cx="800" cy="330" r="360" fill="url(#windowGlow)"/>
+    <path d="M690 520 L690 260 A110 110 0 0 1 910 260 L910 520 Z" fill="#1a2233" opacity="0.55"/>
+    <path d="M690 520 L690 260 A110 110 0 0 1 910 260 L910 520 Z" fill="none" stroke="#3a2413" stroke-width="10"/>
+    <line x1="800" y1="180" x2="800" y2="520" stroke="#3a2413" stroke-width="6"/>
+    <line x1="700" y1="380" x2="900" y2="380" stroke="#3a2413" stroke-width="5"/>
+    <path d="M660 520 L940 520 L940 545 L660 545 Z" fill="#241407"/>
+
+    <!-- 커튼 -->
+    <path d="M640 60 Q600 300 630 545 L580 545 Q560 280 600 60 Z" fill="#4a1818" opacity="0.75"/>
+    <path d="M960 60 Q1000 300 970 545 L1020 545 Q1040 280 1000 60 Z" fill="#4a1818" opacity="0.75"/>
+
+    <!-- 바닥 & 러그 -->
+    <rect x="0" y="700" width="1600" height="200" fill="#1a0f06"/>
+    <ellipse cx="800" cy="800" rx="420" ry="90" fill="#5c1f24" opacity="0.6"/>
+    <ellipse cx="800" cy="800" rx="420" ry="90" fill="none" stroke="#d4a94f" stroke-width="2" opacity="0.35"/>
+    <ellipse cx="800" cy="800" rx="330" ry="65" fill="none" stroke="#d4a94f" stroke-width="1.5" opacity="0.3"/>
+
+    <!-- 원형 테이블 + 램프 -->
+    <circle cx="800" cy="770" r="140" fill="url(#lampGlow)"/>
+    <ellipse cx="800" cy="790" rx="90" ry="26" fill="#2a1608"/>
+    <rect x="770" y="740" width="60" height="55" fill="#2a1608"/>
+    <ellipse cx="800" cy="740" rx="70" ry="20" fill="#3a220f"/>
+    <rect x="792" y="700" width="16" height="45" fill="#1a0e05"/>
+    <path d="M770 700 L830 700 L820 670 L780 670 Z" fill="#e8c98a" opacity="0.85"/>
+
+    <!-- 안락의자 실루엣 (좌우) -->
+    <path d="M320 900 L320 760 Q320 720 370 720 L470 720 Q520 720 520 760 L520 900 Z" fill="#1c1006" opacity="0.9"/>
+    <path d="M1080 900 L1080 760 Q1080 720 1130 720 L1230 720 Q1280 720 1280 760 L1280 900 Z" fill="#1c1006" opacity="0.9"/>
+
+    <!-- 벽면 비네트 -->
+    <rect width="1600" height="900" fill="url(#roomBg)" opacity="0.08"/>
+  </svg>`;
+}
+
+// 사건 2 — 눈 결정 (냉동 창고의 죽음)
+function buildSnowflakeSVG(){
+  const snowflake = (cx, cy, r, strokeW, opacity)=>{
+    let arms = '';
+    for(let a=0; a<6; a++){
+      const ang = (Math.PI/3)*a;
+      const x2 = cx+Math.cos(ang)*r, y2 = cy+Math.sin(ang)*r;
+      arms += `<line x1="${cx}" y1="${cy}" x2="${x2}" y2="${y2}" stroke-width="${strokeW}"/>`;
+      // 가지
+      [0.4, 0.7].forEach(t=>{
+        const bx = cx+Math.cos(ang)*r*t, by = cy+Math.sin(ang)*r*t;
+        const b1x = bx+Math.cos(ang+0.6)*r*0.18, b1y = by+Math.sin(ang+0.6)*r*0.18;
+        const b2x = bx+Math.cos(ang-0.6)*r*0.18, b2y = by+Math.sin(ang-0.6)*r*0.18;
+        arms += `<line x1="${bx}" y1="${by}" x2="${b1x}" y2="${b1y}" stroke-width="${strokeW*0.7}"/>`;
+        arms += `<line x1="${bx}" y1="${by}" x2="${b2x}" y2="${b2y}" stroke-width="${strokeW*0.7}"/>`;
+      });
+    }
+    return `<g stroke="#f0f6fb" fill="none" opacity="${opacity}">${arms}</g>`;
+  };
+
+  let smallFlakes = '';
+  for(let i=0;i<26;i++){
+    const cx = Math.random()*1600, cy = Math.random()*900, r = 10+Math.random()*26;
+    smallFlakes += snowflake(cx, cy, r, 1.3, 0.35+Math.random()*0.3);
+  }
+
+  return `<svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <linearGradient id="iceBg" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#2c4c68"/>
+        <stop offset="60%" stop-color="#1c3348"/>
+        <stop offset="100%" stop-color="#122232"/>
+      </linearGradient>
+      <radialGradient id="iceGlow" cx="50%" cy="45%" r="60%">
+        <stop offset="0%" stop-color="#9cc4e0" stop-opacity="0.55"/>
+        <stop offset="100%" stop-color="#9cc4e0" stop-opacity="0"/>
+      </radialGradient>
+    </defs>
+    <rect width="1600" height="900" fill="url(#iceBg)"/>
+    <circle cx="800" cy="420" r="480" fill="url(#iceGlow)"/>
+    ${smallFlakes}
+    ${snowflake(800, 430, 220, 3, 0.85)}
+  </svg>`;
+}
+
+// 사건 3 — 눈 위의 서로 다른 발자국 두 종류 (두 번째 발자국)
+function buildFootprintsSVG(){
+  // 발자국 A: 뾰족한 부츠형 (범인의 신발) — 화면 왼쪽에서 중앙으로
+  const bootPrint = (x, y, rot)=>`
+    <g transform="translate(${x} ${y}) rotate(${rot})" fill="#3a2a1a" opacity="0.65">
+      <path d="M-13 -30 L13 -30 L15 20 Q0 32 -15 20 Z" />
+      <ellipse cx="0" cy="-32" rx="10" ry="7"/>
+    </g>`;
+  // 발자국 B: 둥근 구두형 (죽은 자의 신발, 범인이 갈아신음) — 중앙에서 화면 오른쪽 담장 쪽으로
+  const shoePrint = (x, y, rot)=>`
+    <g transform="translate(${x} ${y}) rotate(${rot})" fill="#241a10" opacity="0.65">
+      <ellipse cx="0" cy="-5" rx="14" ry="28"/>
+      <ellipse cx="0" cy="-34" rx="9" ry="8"/>
+    </g>`;
+
+  let trailA = '';
+  for(let i=0;i<7;i++){
+    const t = i/6;
+    const x = 120 + t*640;
+    const y = 620 - t*140 + (i%2===0 ? 0 : 22);
+    trailA += bootPrint(x, y, (i%2===0 ? -14 : 14) + t*10);
+  }
+
+  let trailB = '';
+  for(let i=0;i<7;i++){
+    const t = i/6;
+    const x = 780 + t*680;
+    const y = 480 + t*220 + (i%2===0 ? 0 : 24);
+    trailB += shoePrint(x, y, (i%2===0 ? 10 : -10) - t*8);
+  }
+
+  return `<svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <linearGradient id="snowSky" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#1b2430"/>
+        <stop offset="100%" stop-color="#2c3a4a"/>
+      </linearGradient>
+      <linearGradient id="snowGround" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#e7edf2"/>
+        <stop offset="100%" stop-color="#c3cfd8"/>
+      </linearGradient>
+    </defs>
+    <rect width="1600" height="420" fill="url(#snowSky)"/>
+    <rect y="380" width="1600" height="520" fill="url(#snowGround)"/>
+    <rect y="375" width="1600" height="10" fill="#f4f7fa" opacity="0.6"/>
+    <!-- 담장 실루엣 -->
+    <rect x="1420" y="260" width="24" height="160" fill="#232b35" opacity="0.5"/>
+    <rect x="1470" y="260" width="24" height="160" fill="#232b35" opacity="0.5"/>
+    <rect x="1400" y="260" width="140" height="14" fill="#232b35" opacity="0.5"/>
+    <!-- 집 실루엣 -->
+    <rect x="60" y="300" width="180" height="130" fill="#1e2530" opacity="0.6"/>
+    <path d="M50 300 L150 240 L250 300 Z" fill="#1e2530" opacity="0.6"/>
+    <!-- 눈 위 발자국 두 종류 -->
+    ${trailA}
+    ${trailB}
+  </svg>`;
+}
+
+// 사건 4 — 폭우 내리는 밤 (세 명의 용의자)
+function buildRainSVG(){
+  let rain = '';
+  for(let i=0;i<90;i++){
+    const x = Math.random()*1650-25;
+    const len = 40+Math.random()*70;
+    const delay = Math.random()*2;
+    const dur = 0.5+Math.random()*0.4;
+    const op = 0.15+Math.random()*0.35;
+    rain += `<line x1="${x}" y1="-40" x2="${x-18}" y2="${-40+len}" stroke="#a9c4dd" stroke-width="1.4" opacity="${op}">
+      <animateTransform attributeName="transform" type="translate" from="0 0" to="18 940" dur="${dur+1.1}s" begin="${delay}s" repeatCount="indefinite"/>
+    </line>`;
+  }
+
+  let windows = '';
+  for(let r=0;r<6;r++){
+    for(let c=0;c<12;c++){
+      const wx = 60+c*46, wy = 120+r*70;
+      const lit = Math.random() > 0.6;
+      windows += `<rect x="${wx}" y="${wy}" width="26" height="34" fill="${lit ? '#e8c98a' : '#0c1420'}" opacity="${lit ? 0.55+Math.random()*0.25 : 0.5}"/>`;
+    }
+  }
+
+  return `<svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <linearGradient id="rainSky" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#1c2733"/>
+        <stop offset="55%" stop-color="#141c26"/>
+        <stop offset="100%" stop-color="#0c1219"/>
+      </linearGradient>
+      <linearGradient id="rainGround" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#0a0e14"/>
+        <stop offset="100%" stop-color="#141b24"/>
+      </linearGradient>
+      <radialGradient id="streetGlow" cx="50%" cy="0%" r="70%">
+        <stop offset="0%" stop-color="#5a7a9e" stop-opacity="0.35"/>
+        <stop offset="100%" stop-color="#5a7a9e" stop-opacity="0"/>
+      </radialGradient>
+    </defs>
+
+    <rect width="1600" height="900" fill="url(#rainSky)"/>
+
+    <!-- 아파트 건물 실루엣 + 창문 -->
+    <rect x="30" y="90" width="620" height="620" fill="#161f2a"/>
+    ${windows}
+
+    <!-- 건너편 건물 실루엣 -->
+    <rect x="900" y="180" width="260" height="530" fill="#10161e" opacity="0.85"/>
+    <rect x="1200" y="240" width="340" height="470" fill="#12181f" opacity="0.85"/>
+
+    <circle cx="800" cy="60" r="500" fill="url(#streetGlow)"/>
+
+    <!-- 젖은 바닥 & 가로등 반사 -->
+    <rect y="710" width="1600" height="190" fill="url(#rainGround)"/>
+    <ellipse cx="1150" cy="760" rx="220" ry="26" fill="#5a7a9e" opacity="0.18"/>
+    <ellipse cx="400" cy="800" rx="260" ry="20" fill="#3a4a5c" opacity="0.2"/>
+
+    <!-- 가로등 -->
+    <rect x="1140" y="560" width="8" height="160" fill="#0c1219"/>
+    <circle cx="1144" cy="555" r="16" fill="#e8c98a" opacity="0.85"/>
+    <circle cx="1144" cy="555" r="60" fill="#e8c98a" opacity="0.15"/>
+
+    <!-- 비 -->
+    ${rain}
+  </svg>`;
+}
+
+// 사건 5 — 벽난로와 불타는 서재 (유언장을 태운 남자)
+function buildFireplaceSVG(){
+  // 흔들리는 불꽃 (여러 겹의 애니메이션 path)
+  const flame = (cx, baseY, scale, hueOffset)=>{
+    const dur1 = (1.1 + Math.random()*0.4).toFixed(2);
+    const dur2 = (0.9 + Math.random()*0.4).toFixed(2);
+    return `
+      <g transform="translate(${cx} ${baseY}) scale(${scale})">
+        <path fill="#3a0f05" opacity="0.9">
+          <animate attributeName="d" dur="${dur1}s" repeatCount="indefinite"
+            values="M0 0 Q-30 -60 -8 -110 Q10 -140 0 -170 Q-10 -140 8 -110 Q30 -60 0 0Z;
+                    M0 0 Q-24 -70 -4 -120 Q8 -155 0 -180 Q-8 -150 6 -118 Q26 -66 0 0Z;
+                    M0 0 Q-30 -60 -8 -110 Q10 -140 0 -170 Q-10 -140 8 -110 Q30 -60 0 0Z"/>
+        </path>
+        <path fill="#c4552e" opacity="0.92">
+          <animate attributeName="d" dur="${dur2}s" repeatCount="indefinite"
+            values="M0 0 Q-20 -45 -5 -85 Q8 -108 0 -132 Q-6 -108 5 -85 Q20 -45 0 0Z;
+                    M0 0 Q-16 -50 -3 -92 Q6 -118 0 -140 Q-5 -115 3 -90 Q17 -50 0 0Z;
+                    M0 0 Q-20 -45 -5 -85 Q8 -108 0 -132 Q-6 -108 5 -85 Q20 -45 0 0Z"/>
+        </path>
+        <path fill="#f0b94f" opacity="0.95">
+          <animate attributeName="d" dur="${(0.7+Math.random()*0.3).toFixed(2)}s" repeatCount="indefinite"
+            values="M0 0 Q-10 -25 -3 -50 Q5 -65 0 -80 Q-4 -65 2 -50 Q10 -25 0 0Z;
+                    M0 0 Q-7 -28 -2 -55 Q4 -72 0 -88 Q-3 -70 1 -54 Q8 -28 0 0Z;
+                    M0 0 Q-10 -25 -3 -50 Q5 -65 0 -80 Q-4 -65 2 -50 Q10 -25 0 0Z"/>
+        </path>
+      </g>`;
+  };
+
+  // 떠오르는 불씨 입자
+  let embers = '';
+  for(let i=0;i<16;i++){
+    const x = 720 + Math.random()*160;
+    const dur = (2.5+Math.random()*2).toFixed(2);
+    const delay = (Math.random()*2.5).toFixed(2);
+    const r = 1.5+Math.random()*2;
+    embers += `<circle cx="${x}" cy="640" r="${r}" fill="#f0b94f" opacity="0">
+      <animate attributeName="cy" from="640" to="${240+Math.random()*120}" dur="${dur}s" begin="${delay}s" repeatCount="indefinite"/>
+      <animate attributeName="opacity" values="0;0.9;0" dur="${dur}s" begin="${delay}s" repeatCount="indefinite"/>
+      <animate attributeName="cx" values="${x};${x+ (Math.random()>0.5?18:-18)};${x}" dur="${dur}s" begin="${delay}s" repeatCount="indefinite"/>
+    </circle>`;
+  }
+
+  let shelfWindows = '';
+  const bookColors = ['#5c3319','#6e3f1e','#7a4322','#4a2a17','#603520'];
+  for(let r=0;r<4;r++){
+    for(let c=0;c<10;c++){
+      shelfWindows += `<rect x="${80+c*22}" y="${140+r*90}" width="18" height="${70+Math.sin(c+r)*8}" fill="${bookColors[(r+c)%bookColors.length]}" opacity="0.8"/>`;
+    }
+  }
+  let shelfWindows2 = '';
+  for(let r=0;r<4;r++){
+    for(let c=0;c<10;c++){
+      shelfWindows2 += `<rect x="${1080+c*22}" y="${140+r*90}" width="18" height="${70+Math.sin(c+r)*8}" fill="${bookColors[(r+c+1)%bookColors.length]}" opacity="0.8"/>`;
+    }
+  }
+
+  return `<svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <linearGradient id="fireRoom" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#3c2213"/>
+        <stop offset="55%" stop-color="#2c180d"/>
+        <stop offset="100%" stop-color="#1c0f08"/>
+      </linearGradient>
+      <radialGradient id="fireGlow" cx="50%" cy="76%" r="65%">
+        <stop offset="0%" stop-color="#e8823f" stop-opacity="0.85"/>
+        <stop offset="45%" stop-color="#c4552e" stop-opacity="0.5"/>
+        <stop offset="100%" stop-color="#c4552e" stop-opacity="0"/>
+      </radialGradient>
+    </defs>
+
+    <rect width="1600" height="900" fill="url(#fireRoom)"/>
+
+    <!-- 책장 (양옆, 화재로 그을린 톤) -->
+    ${shelfWindows}
+    ${shelfWindows2}
+
+    <!-- 벽난로 불빛 -->
+    <ellipse cx="800" cy="700" rx="700" ry="320" fill="url(#fireGlow)"/>
+
+    <!-- 벽난로 구조물 -->
+    <path d="M560 900 L560 560 Q560 500 640 480 L960 480 Q1040 500 1040 560 L1040 900 Z" fill="#2a1710" opacity="0.95"/>
+    <rect x="600" y="600" width="400" height="300" fill="#160a05"/>
+    <path d="M600 600 L1000 600 L960 480 L640 480 Z" fill="#382013"/>
+    <rect x="560" y="470" width="480" height="18" fill="#4a2a19"/>
+
+    <!-- 장작 -->
+    <rect x="700" y="850" width="200" height="18" rx="8" fill="#2a1810"/>
+    <rect x="720" y="835" width="160" height="16" rx="8" fill="#3a2412"/>
+
+    <!-- 불꽃 -->
+    ${flame(760, 852, 1.15, 0)}
+    ${flame(800, 858, 0.95, 10)}
+    ${flame(840, 850, 1.05, -8)}
+
+    <!-- 불씨 -->
+    ${embers}
+
+    <!-- 벽면 비네트 (약하게) -->
+    <rect width="1600" height="140" fill="#000000" opacity="0.2"/>
+  </svg>`;
+}
+
+const SCENES = { 1: buildLibrarySVG, 2: buildSnowflakeSVG, 3: buildFootprintsSVG, 4: buildRainSVG, 5: buildFireplaceSVG };
+let sceneSwapToken = 0; // 빠르게 연속 전환될 때 이전 타이머가 새 장면을 덮어쓰지 않도록 막는 토큰
+
+function setScene(caseObj){
+  const bg = document.getElementById('sceneBg');
+  const myToken = ++sceneSwapToken;
+
+  const applyNewScene = () => {
+    if(myToken !== sceneSwapToken) return; // 그 사이 또 다른 전환이 요청됐다면 이 적용은 무시
+    if(caseObj && SCENES[caseObj.id]){
+      bg.innerHTML = SCENES[caseObj.id]();
+      // 프레임을 한 번 건너뛰어야 브라우저가 opacity:0 상태를 인지하고 트랜지션을 태운다
+      requestAnimationFrame(()=> requestAnimationFrame(()=> {
+        if(myToken === sceneSwapToken) bg.classList.add('show');
+      }));
+    } else {
+      bg.innerHTML = '';
+    }
+  };
+
+  if(bg.classList.contains('show')){
+    // 이미 뭔가 보이고 있다면: 먼저 페이드아웃 → 다 사라지면 내용 교체 → 페이드인
+    bg.classList.remove('show');
+    setTimeout(applyNewScene, 700);
+  } else {
+    // 검은 화면 상태였다면 바로 다음 장면을 넣고 페이드인
+    applyNewScene();
+  }
+
+  if(caseObj && caseObj.theme){
+    document.documentElement.style.setProperty('--case-accent', caseObj.theme.accent);
+    document.documentElement.style.setProperty('--case-accent-dim', caseObj.theme.accentDim);
+  } else {
+    document.documentElement.style.removeProperty('--case-accent');
+    document.documentElement.style.removeProperty('--case-accent-dim');
+  }
+}
+
+/* ========================= 상태 ========================= */
+let state = {
+  greeted:false,
+  lastCategory:null,
+  solvedIds:new Set(),   // 해결한 사건 id 모음
+  inCase:false,
+  currentCase:null,
+  hintStage:0
+};
+
+const messagesEl = document.getElementById('messages');
+const caseStatusEl = document.getElementById('caseStatus');
+const caseSidebarEl = document.getElementById('caseSidebar');
+
+function scrollDown(){
+  messagesEl.scrollTop = messagesEl.scrollHeight;
+}
+
+function addMsg(text, cls){
+  const div = document.createElement('div');
+  div.className = 'msg ' + cls;
+  div.textContent = text;
+  messagesEl.appendChild(div);
+  scrollDown();
+}
+
+function addCaseMsg(caseObj){
+  const div = document.createElement('div');
+  div.className = 'msg case';
+  const title = document.createElement('div');
+  title.className = 'case-title';
+  title.textContent = '사건 파일 — ' + caseObj.title;
+  const body = document.createElement('div');
+  body.textContent = caseObj.description;
+  div.appendChild(title);
+  div.appendChild(body);
+  messagesEl.appendChild(div);
+  scrollDown();
+}
+
+function updateCaseStatus(){
+  if(state.inCase){
+    caseStatusEl.textContent = '수사 중 · ' + state.currentCase.title;
+    caseStatusEl.classList.add('active');
+  } else {
+    caseStatusEl.classList.remove('active');
+  }
+}
+
+function pick(arr){
+  return arr[Math.floor(Math.random()*arr.length)];
+}
+
+function includesAny(text, list){
+  return list.some(k => text.includes(k));
+}
+
+/* ========================= 사건 목록 사이드바 ========================= */
+function renderCaseSidebar(){
+  caseSidebarEl.querySelectorAll('.caseBtn').forEach(b=>b.remove());
+  CASES.forEach((c, i)=>{
+    const isPlaying = state.inCase && state.currentCase && state.currentCase.id === c.id;
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'caseBtn';
+    if(state.solvedIds.has(c.id)) btn.classList.add('solved');
+    if(isPlaying) btn.classList.add('playing');
+    btn.innerHTML = `<span class="cb-num">사건 ${i+1}</span><span class="cb-title">${c.title}</span><span class="cb-status">${isPlaying ? '▶ 조사 중 (다시 누르면 나가기)' : (state.solvedIds.has(c.id) ? '✓ 해결됨' : '미해결')}</span>`;
+    btn.addEventListener('click', ()=> {
+      if(isPlaying){ exitCaseToChat(); } else { selectCase(c.id); }
+    });
+    caseSidebarEl.appendChild(btn);
+  });
+}
+
+/* ========================= 사건 로직 ========================= */
+function startCaseObj(caseObj, isSwitch){
+  state.currentCase = caseObj;
+  state.inCase = true;
+  state.hintStage = 0;
+  updateCaseStatus();
+  setScene(caseObj);
+  renderCaseSidebar();
+  addMsg(isSwitch ? "다른 사건으로 넘어가는군. 좋다, 잘 봐라." : "사건을 하나 주지. 잘 봐라.", "bot");
+  addCaseMsg(caseObj);
+}
+
+function exitCaseToChat(){
+  addMsg("좋다, 여기까지 하지. 사건은 미해결로 남겨두마 — 원하면 나중에 다시 골라.", "system");
+  state.inCase = false;
+  state.currentCase = null;
+  updateCaseStatus();
+  setScene(null);
+  renderCaseSidebar();
+}
+
+function selectCase(id){
+  const caseObj = CASES.find(c => c.id === id);
+  if(!caseObj) return;
+  const isSwitch = state.inCase;
+  startCaseObj(caseObj, isSwitch);
+}
+
+function startRandomCase(){
+  const unsolved = CASES.filter(c => !state.solvedIds.has(c.id));
+  const pool = unsolved.length > 0 ? unsolved : CASES;
+  const caseObj = pick(pool);
+  const isSwitch = state.inCase;
+  if(unsolved.length === 0){
+    addMsg("전부 해결한 사건들이다만, 다시 훑어보는 것도 나쁘지 않지.", "system");
+  }
+  startCaseObj(caseObj, isSwitch);
+}
+
+function giveHint(){
+  const c = state.currentCase;
+  if(state.hintStage >= c.hints.length){
+    addMsg("더 줄 힌트가 없다. 포기하거나 스스로 풀어라.", "bot");
+    return;
+  }
+  addMsg("힌트: " + c.hints[state.hintStage], "bot");
+  state.hintStage++;
+}
+
+function giveUp(){
+  const c = state.currentCase;
+  addMsg("포기라, 실망이군. 정답은 알려주지 않겠다 — 다음에 다시 도전해봐.", "bot");
+  finishCase();
+}
+
+function finishCase(){
+  state.inCase = false;
+  updateCaseStatus();
+  setScene(null);
+  renderCaseSidebar();
+  const remaining = CASES.filter(c => !state.solvedIds.has(c.id));
+  if(remaining.length > 0){
+    addMsg("다른 사건을 원하면 '사건'이라고 말하거나, 옆에서 골라봐.", "system");
+  } else {
+    addMsg("이걸로 지금까지의 미제 사건은 전부 해결됐다. 제법 흥미로웠어.", "system");
+  }
+}
+
+function judgeCase(text){
+  const c = state.currentCase;
+  if(includesAny(text, c.keywords)){
+    addMsg(c.correctReply, "bot");
+    state.solvedIds.add(c.id);
+    finishCase();
+  } else {
+    addMsg(c.wrongReply, "bot");
+  }
+}
+
+/* ========================= 메인 응답 로직 ========================= */
+function respond(rawText){
+  const text = rawText.trim();
+  const lower = text.toLowerCase();
+
+  // 가이드/도움말은 사건 진행 중이든 아니든 항상 최우선으로 열림 (오답 판정에 끼어들지 않게)
+  if(includesAny(lower, GUIDE_KEYWORDS)){
+    addMsg(state.inCase ? "여기, 사건 풀이 가이드다." : "여기, 대화 가이드다.", "system");
+    openHelpModal();
+    return;
+  }
+
+  // 너무 짧은 입력 (게임 중이 아닐 때만 별도 처리) — 자음 초성(ㅎㅇ, ㄱㅅ 등)은 짧아도 의미가 있으니 제외
+  if(!state.inCase && text.length <= 2 && !/[가-힣ㄱ-ㅎㅏ-ㅣa-zA-Z]{2,}/.test(text)){
+    addMsg(pick(SHORT_INPUT_REPLIES), "bot");
+    return;
+  }
+
+  // 사건 진행 중이면 힌트/포기/심심(집중 유도)/정답판정 우선
+  if(state.inCase){
+    if(includesAny(lower, HINT_KEYWORDS)){ giveHint(); return; }
+    if(includesAny(lower, GIVEUP_KEYWORDS)){ giveUp(); return; }
+    if(includesAny(lower, BORED_KEYWORDS)){ addMsg(pick(FOCUS_ON_CASE_REPLIES), "bot"); return; }
+    judgeCase(lower);
+    return;
+  }
+
+  // 사건이 없는데 힌트/포기를 요청한 경우
+  if(includesAny(lower, HINT_KEYWORDS)){ addMsg(pick(NO_CASE_HINT_REPLIES), "bot"); return; }
+  if(includesAny(lower, GIVEUP_KEYWORDS)){ addMsg(pick(NO_CASE_GIVEUP_REPLIES), "bot"); return; }
+
+  // 사건 시작 키워드
+  if(includesAny(lower, CASE_START_KEYWORDS)){
+    startRandomCase();
+    return;
+  }
+
+  // 카테고리 매칭
+  for(const cat of CATEGORIES){
+    if(includesAny(lower, cat.keywords)){
+      if(cat.name === state.lastCategory){
+        addMsg(REPEAT_REPLY, "bot");
+      } else {
+        addMsg(pick(cat.replies), "bot");
+      }
+      state.lastCategory = cat.name;
+
+      // 인사 시 1회 이름 소개
+      if(cat.name === "인사" && !state.greeted){
+        state.greeted = true;
+        setTimeout(()=>{
+          addMsg("셜록 홈즈. 탐정이야. 자문탐정, 세계 유일의.", "bot");
+        }, 350);
+      }
+      return;
+    }
+  }
+
+  // fallback
+  state.lastCategory = null;
+  addMsg(pick(FALLBACKS), "bot");
+}
+
+/* ========================= 도움말 모달 ========================= */
+function renderHelpList(){
+  const listEl = document.getElementById('helpList');
+  listEl.innerHTML = '';
+
+  // 이름 소개는 CATEGORIES 배열에 없고 인사 시 1회 별도로 나가는 항목이라 수동으로 추가
+  const manualFirst = { name:"이름 소개", note:"인사하면 처음 한 번, 자동으로 자기소개를 한다." };
+  const firstDiv = document.createElement('div');
+  firstDiv.className = 'helpItem';
+  firstDiv.innerHTML = `<div class="hi-name">${manualFirst.name}</div><div class="hi-keywords">${manualFirst.note}</div>`;
+  listEl.appendChild(firstDiv);
+
+  CATEGORIES.forEach(cat=>{
+    if(cat.name === "부적절") return; // 도움말에 욕설/선정적 키워드를 그대로 노출하지 않음
+    const div = document.createElement('div');
+    div.className = 'helpItem';
+    const kw = cat.keywords.map(k=>`<span>${k}</span>`).join(', ');
+    div.innerHTML = `<div class="hi-name">${cat.name}</div><div class="hi-keywords">${kw}</div>`;
+    listEl.appendChild(div);
+  });
+
+  // 사건 놀이는 CATEGORIES 밖의 별도 키워드셋이라 마지막에 수동 추가
+  const caseDiv = document.createElement('div');
+  caseDiv.className = 'helpItem';
+  const caseKw = CASE_START_KEYWORDS.map(k=>`<span>${k}</span>`).join(', ');
+  caseDiv.innerHTML = `<div class="hi-name">사건 의뢰 놀이</div><div class="hi-keywords">${caseKw}</div>`;
+  listEl.appendChild(caseDiv);
+}
+
+function renderCaseHelpList(){
+  const listEl = document.getElementById('helpList');
+  listEl.innerHTML = '';
+
+  const c = state.currentCase;
+  const items = [
+    { name:"정답 맞히기", note:"범인이나 트릭이라고 생각하는 걸 자유롭게 문장으로 쳐봐. 핵심 단어가 들어가면 정답으로 인정돼." },
+    { name:"힌트", note:`'${HINT_KEYWORDS.join("' / '")}' 라고 치면 단서를 하나씩 더 공개한다. (이 사건은 힌트 ${c ? c.hints.length : 0}단계까지 있음)` },
+    { name:"포기", note:`'${GIVEUP_KEYWORDS.join("' / '")}' 라고 치면 이 사건을 중단한다. 단, 정답은 알려주지 않고 사건은 미해결로 남는다.` },
+    { name:"다른 사건으로 이동", note:"오른쪽 사건 목록에서 다른 사건을 클릭하면 지금 사건은 미해결로 남긴 채 바로 전환된다." },
+    { name:"일상 채팅으로 나가기", note:"지금 조사 중인 사건을 사이드바에서 한 번 더 클릭하면 사건을 중단하고 평소 대화로 돌아간다." }
+  ];
+
+  items.forEach(it=>{
+    const div = document.createElement('div');
+    div.className = 'helpItem';
+    div.innerHTML = `<div class="hi-name">${it.name}</div><div class="hi-keywords">${it.note}</div>`;
+    listEl.appendChild(div);
+  });
+}
+
+function openHelpModal(){
+  const introEl = document.getElementById('helpIntro');
+  if(state.inCase){
+    introEl.textContent = "지금은 사건 조사 중. 이렇게 풀어나가면 된다.";
+    renderCaseHelpList();
+  } else {
+    introEl.textContent = "이런 말을 걸면 셜록이 반응해.";
+    renderHelpList();
+  }
+  document.getElementById('helpModal').classList.add('open');
+}
+function closeHelpModal(){
+  document.getElementById('helpModal').classList.remove('open');
+}
+
+document.getElementById('helpBtn').addEventListener('click', openHelpModal);
+
+document.getElementById('toggleChatBtn').addEventListener('click', function(){
+  const app = document.getElementById('app');
+  const hidden = app.classList.toggle('app-hidden');
+  this.textContent = hidden ? '대화창 보이기' : '대화창 숨기기';
+});
+document.getElementById('helpCloseBtn').addEventListener('click', closeHelpModal);
+document.getElementById('helpModal').addEventListener('click', (e)=>{
+  if(e.target.id === 'helpModal') closeHelpModal();
+});
+
+/* ========================= 이벤트 바인딩 ========================= */
+
+document.getElementById('startBtn').addEventListener('click', ()=>{
+  document.getElementById('intro').style.display = 'none';
+  document.getElementById('app').classList.add('active');
+  document.getElementById('toggleChatBtn').style.display = 'block';
+  renderCaseSidebar();
+  addMsg("...관찰 대상 발견. 뭘 도와줄까.", "bot");
+});
+
+document.getElementById('inputForm').addEventListener('submit', (e)=>{
+  e.preventDefault();
+  const input = document.getElementById('userInput');
+  const val = input.value.trim();
+  if(!val) return;
+  addMsg(val, "user");
+  input.value = '';
+  setTimeout(()=> respond(val), 300);
+});
+
+document.querySelectorAll('.sizebtn').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.documentElement.style.setProperty('--msg-font-size', btn.dataset.size);
+    document.querySelectorAll('.sizebtn').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+  });
+});
+
+document.querySelectorAll('.quickbtn').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.getElementById('userInput').value = btn.dataset.fill;
+    document.getElementById('inputForm').dispatchEvent(new Event('submit'));
+  });
+});
+</script>
+</body>
+</html>
